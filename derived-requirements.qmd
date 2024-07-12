@@ -1,0 +1,47 @@
+---
+title: "derived-requirements"
+author: "J S Jenkins"
+format: html
+editor: visual
+---
+
+## "Derived" Requirements Don't Exist
+
+Suppose we are asked to deliver a system that can fire a projectile with sufficient energy to displace a massive object. The customer requirement is to displace the object. After physical analysis, we (the supplier) calculate the minimum kinetic energy sufficient to do the job. That is, have determined $k$ such that
+
+$$
+\frac{m v^2}{2} > k
+$$
+
+implies mission success. Without loss of generality, we can take $k = 1/2$:
+
+$$
+m v^2 > 1
+$$
+
+Note that this constraint is not a requirement; it is a design feature expressed (as all design features are) as a constraint on a property.
+
+Suppose we decompose our system into two components independently supplied: the projectile and the launcher. We need to to write requirements on those components so that each can be independently designed and manufactured.
+
+The first point to observe is that the constraint above partitions the space of (mass, velocity) pairs into a feasible region and an infeasible region. Every point above and/or to the right of the curve below satisfies the constraint; every other point fails to satisfy it.
+
+```{r}
+#| echo: false
+suppressMessages({library(ggplot2)})
+df <- data.frame(m = c(0.01, 1))
+fv1 <- function(m) sqrt(2 / m)
+p1 <- ggplot(data=df, aes(x = m, y = after_stat(y))) + stat_function(fun = fv1)
+p1
+```
+
+Our job as systems engineers is to allocate requirements to components so that all acceptable realizations of those component will satisfy the constraint when integrated into our system. It is possible to do this, and systems engineers do it all the time. It is wrong to call this writing derived requirements, however, because (as we shall see) the requirements we write are in no sense derived from (or implied by) some higher-level requirement. In this particular case there are three fiat acts that represent the exercise of design authority as systems engineer. These acts involve knowledge and judgment.
+
+Fiat Act 1
+
+```{r}
+fv2 <- function(m) sqrt(3 / m)
+p2 <- p1 + stat_function(fun = fv2, linetype = "dashed")
+p2
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
