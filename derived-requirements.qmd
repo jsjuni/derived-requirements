@@ -13,10 +13,10 @@ $$
 \frac{m v^2}{2} > k
 $$
 
-implies mission success. Without loss of generality, we can take $k = 1/2$:
+implies mission success. Without loss of generality, we can take $k = 1/2 \thinspace \rm J$:
 
 $$
-m v^2 > 1
+m v^2 > 1 \thinspace \rm J
 $$
 
 Note that this constraint is not a requirement; it is a design feature expressed (as all design features are) as a constraint on a property.
@@ -28,20 +28,48 @@ The first point to observe is that the constraint above partitions the space of 
 ```{r}
 #| echo: false
 suppressMessages({library(ggplot2)})
-df <- data.frame(m = c(0.01, 1))
-fv1 <- function(m) sqrt(2 / m)
-p1 <- ggplot(data=df, aes(x = m, y = after_stat(y))) + stat_function(fun = fv1)
+df <- data.frame(m = seq(from = 1e-2, to = 1, length.out = 100))
+fv1 <- function(m) sqrt(1 / m)
+p1 <- ggplot(data=df, aes(x = m, y = after_stat(y))) + ylab("v") + stat_function(fun = fv1)
 p1
 ```
 
-Our job as systems engineers is to allocate requirements to components so that all acceptable realizations of those component will satisfy the constraint when integrated into our system. It is possible to do this, and systems engineers do it all the time. It is wrong to call this writing derived requirements, however, because (as we shall see) the requirements we write are in no sense derived from (or implied by) some higher-level requirement. In this particular case there are three fiat acts that represent the exercise of design authority as systems engineer. These acts involve knowledge and judgment.
+Our job as systems engineers is to allocate requirements to components so that all acceptable realizations of those components will satisfy the constraint when integrated into our system. It is possible to do this, and systems engineers do it all the time. It is wrong to call this writing *derived* requirements, however, because (as we shall see) the requirements we write are in no sense derived from (or implied by) some higher-level requirement. In this particular case there are three fiat acts that represent the exercise of design authority as systems engineer. These acts involve independent knowledge and judgment.
 
-Fiat Act 1
+### Fiat Act 1
+
+We might recognize that there is uncertainty in our analysis. Perhaps our estimate of the target mass is a crude approximation, and therefore our kinetic energy bound might be optimistic. The standard response to uncertainty in this situation is to add margin. For the sake of illustration, we add 100% margin. The feasible region is now bounded by the dashed line.
 
 ```{r}
-fv2 <- function(m) sqrt(3 / m)
+fv2 <- function(m) sqrt(2 / m)
 p2 <- p1 + stat_function(fun = fv2, linetype = "dashed")
 p2
 ```
 
-The `echo: false` option disables the printing of code (only output is displayed).
+### Fiat Act 2
+
+Suppose we have a long and satisfactory history with a particular projectile type. Perhaps we are aware that we can acquire these projectiles on advantageous terms from competing suppliers. Suppose this projectile type has a nominal mass of 0.25 kg ± 0.05 kg. We can then express these constraints as requirements on the projectile:
+
+$$
+0.2 \thinspace \mathrm{kg} < m < 0.3 \thinspace \mathrm{kg}
+$$
+
+These constraints restrict the feasible region as follows:
+
+```{r}
+p3 <- p2 + geom_vline(xintercept = .2) + geom_vline(xintercept = .3)
+p3
+```
+
+### Fiat Act 3
+
+The launcher design will depend on part on the projectile characteristics. Having bounded the projectile mass, we can write a specification for the launcher that incorporates these bounds into scenarios (*not* requirements) for launch velocity. To avoid adding further margin (we are free to do so, but decline in the interest of economy), we require the velocity to be at least as large as the lowest velocity that suffices for the lightest projectile. That is, for all $0.2 \thinspace \mathrm{kg} < m < 0.3 \thinspace \mathrm{kg}$,
+
+$$
+v > \sqrt{\frac{2 \thinspace \mathrm{J}}{0.2\thinspace \mathrm{kg}}} \approx 3.16 \thinspace \mathrm{m}\cdot\mathrm{s}^{-1}
+$$
+
+```{r}
+p4 <- p3 + geom_hline(yintercept = sqrt(2/.2))
+p4
+```
