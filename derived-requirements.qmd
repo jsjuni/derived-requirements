@@ -5,9 +5,9 @@ format: html
 editor: visual
 ---
 
-## "Derived" Requirements Don't Exist
+## "Derived" Requirements: A Misleading Word
 
-Suppose we are asked to deliver a system that can fire a projectile with sufficient energy to displace a massive object. The customer requirement is to displace the object. After physical analysis, we (the supplier) calculate the minimum kinetic energy sufficient to do the job. That is, have determined $k$ such that
+Suppose we are asked to deliver a system that can fire a projectile with sufficient energy to displace a massive object. The customer requirement is to displace the object. After physical analysis, we (the system integrator) calculate the minimum imparted kinetic energy sufficient to do the job. That is, have determined $k$ such that
 
 $$
 \frac{m v^2}{2} > k
@@ -21,32 +21,53 @@ $$
 
 Note that this constraint is not a requirement; it is a design feature expressed (as all design features are) as a constraint on a property.
 
-Suppose we decompose our system into two components independently supplied: the projectile and the launcher. We need to to write requirements on those components so that each can be independently designed and manufactured.
-
-The first point to observe is that the constraint above partitions the space of (mass, velocity) pairs into a feasible region and an infeasible region. Every point above and/or to the right of the curve below satisfies the constraint; every other point fails to satisfy it.
+The first point to observe is that the constraint above partitions the space of (mass, velocity) pairs into an acceptable region and an unacceptable region. Every point above and/or to the right of the curve below satisfies the constraint; every other point fails to satisfy it.
 
 ```{r}
 #| echo: false
-suppressMessages({library(ggplot2)})
-df <- data.frame(m = seq(from = 1e-2, to = 1, length.out = 100))
-fv1 <- function(m) sqrt(1 / m)
-p1 <- ggplot(data=df, aes(x = m, y = after_stat(y))) + ylab("v") + stat_function(fun = fv1)
-p1
+suppressMessages({library(ggplot2); library(tidyverse)})
+df <- data.frame(m = seq(from = 1e-2, to = 1, length.out = 100)) |> mutate(v = sqrt(1 / m))
+p1 <- ggplot(data = df) +
+  xlab("mass (kg)") + 
+  ylab("velocity (m/s)") +
+  geom_ribbon(aes(x = m, ymin = 0, ymax = v), fill = "grey", alpha = 0.7) +
+  geom_line(aes(x = m, y = v))
+p1 + ggtitle("Original Acceptable Region")
 ```
 
-Our job as systems engineers is to allocate requirements to components so that all acceptable realizations of those components will satisfy the constraint when integrated into our system. It is possible to do this, and systems engineers do it all the time. It is wrong to call this writing *derived* requirements, however, because (as we shall see) the requirements we write are in no sense derived from (or implied by) some higher-level requirement. In this particular case there are three fiat acts that represent the exercise of design authority as systems engineer. These acts involve independent knowledge and judgment.
+Our job as systems engineers is to allocate requirements to components so that all acceptable realizations of those components will satisfy the constraint when integrated into our system. It is possible to do this, and systems engineers do it all the time. It is wrong, however, to call these *derived* requirements, however, because (as we shall see) the requirements we write are in no sense derived from (or implied by) some higher-level requirement. To emphasize the point we will elaborate two different but equally valid allocations, corresponding to alternative sets of fiat acts incorporating both knowledge and judgment.
 
-### Fiat Act 1
+Suppose we decompose our system into two components to be independently supplied: the projectile and the launcher. We need to to write requirements on those components so that each can be independently designed and manufactured. We accomplish this by *allocating* regions of parameter space to those components. The allocation must have the property that the system will be acceptable if each component meets its requirements. Each component design must accommodate the worst case performance of the other.
 
-We might recognize that there is uncertainty in our analysis. Perhaps our estimate of the target mass is a crude approximation, and therefore our kinetic energy bound might be optimistic. The standard response to uncertainty in this situation is to add margin. For the sake of illustration, we add 100% margin. The feasible region is now bounded by the dashed line.
+A well-written requirement generally consists of two parts: a set of constraints (sometimes collected into scenarios) that delimit when the requirement is applicable, and a set of constraints to be satisfied by the item to be acquired. The supplier of each component is permitted to assume that the other component will satisfy its requirements. This permission is encoded in the applicability constraints. That is,
+
+-   the requirements on the projectile may look like "If the launcher has these characteristics, then the projectile shall have these other characteristics", and
+
+-   the requirements on the launcher may look like "If the projectile has these characteristics, then the launcher shall have these other characteristics".
+
+It is important to understand that allocation has both benefits and costs. The benefit is that subsystems can design to their allocations independently. This is, of course, the essence of systems engineering: to decompose a complex problem into progressively simpler problems can can be solved in a restricted context. The cost is that in doing so we willfully and knowingly rule out regions of solution space that would be otherwise acceptable. The challenge is to balance a tractable problem space with a rich solution space.
+
+### Fiat Act 1: Margin
+
+We might recognize that there is uncertainty in our analysis. Perhaps our estimate of the target mass is a crude approximation, and therefore our kinetic energy bound might be optimistic. The standard response to uncertainty in this situation is to add margin. For the sake of illustration, we add 100% margin. That is,
+
+$$
+m v^2 > 2 \thinspace \rm J
+$$
+
+The acceptable region is now bounded by the dashed line.
 
 ```{r}
-fv2 <- function(m) sqrt(2 / m)
-p2 <- p1 + stat_function(fun = fv2, linetype = "dashed")
-p2
+#| echo: false
+df2 <- mutate(df, vm = sqrt(2) * v)
+p2 <- p1 + geom_line(data = df2, mapping = aes(x = m, y = vm), linetype = "dashed") +
+  geom_ribbon(data = df2, aes(x = m, ymin = v, ymax = vm), fill = "grey", alpha = 0.5)
+p2 + ggtitle("Acceptable Region With 100% Margin")
 ```
 
-### Fiat Act 2
+### Allocation A
+
+#### Fiat Act A1: Projectile Restrictions
 
 Suppose we have a long and satisfactory history with a particular projectile type. Perhaps we are aware that we can acquire these projectiles on advantageous terms from competing suppliers. Suppose this projectile type has a nominal mass of 0.25 kg ± 0.05 kg. We can then express these constraints as requirements on the projectile:
 
@@ -54,22 +75,67 @@ $$
 0.2 \thinspace \mathrm{kg} < m < 0.3 \thinspace \mathrm{kg}
 $$
 
-These constraints restrict the feasible region as follows:
+These constraints restrict the acceptable region as follows:
 
 ```{r}
-p3 <- p2 + geom_vline(xintercept = .2) + geom_vline(xintercept = .3)
-p3
+#| echo: false
+p3 <- p2 + 
+      geom_ribbon(data = filter(df2, m <= 0.2), aes(x = m, ymin = vm, ymax = Inf), fill = "grey", alpha = 0.5) +
+      geom_ribbon(data = filter(df2, m >= 0.3), aes(x = m, ymin = vm, ymax = Inf), fill = "grey", alpha = 0.5)
+p3 + ggtitle("Acceptable Region Restricted by Projectile Constraints")
 ```
 
-### Fiat Act 3
+#### Fiat Act A2: Launcher Restrictions
 
-The launcher design will depend on part on the projectile characteristics. Having bounded the projectile mass, we can write a specification for the launcher that incorporates these bounds into scenarios (*not* requirements) for launch velocity. To avoid adding further margin (we are free to do so, but decline in the interest of economy), we require the velocity to be at least as large as the lowest velocity that suffices for the lightest projectile. That is, for all $0.2 \thinspace \mathrm{kg} < m < 0.3 \thinspace \mathrm{kg}$,
+The launcher design will depend on part on the projectile characteristics. Having bounded the projectile mass, we can write a specification for the launcher that incorporates these bounds into scenarios that constrain the applicability of a requirement for launch velocity. To avoid adding further margin (we are free to do so, but decline in the interest of economy), we require the velocity to be at least as large as the lowest velocity that suffices for the lightest projectile. That is, for all $m$ such that $0.2 \thinspace \mathrm{kg} < m < 0.3 \thinspace \mathrm{kg}$,
 
 $$
 v > \sqrt{\frac{2 \thinspace \mathrm{J}}{0.2\thinspace \mathrm{kg}}} \approx 3.16 \thinspace \mathrm{m}\cdot\mathrm{s}^{-1}
 $$
 
 ```{r}
-p4 <- p3 + geom_hline(yintercept = sqrt(2/.2))
-p4
+#| echo: false
+yr <- sqrt(2/.2)
+p4 <- p3 + 
+      geom_ribbon(data = filter(df2, m >= 0.2 & m <= 0.3), aes(x = m, ymin = vm, ymax = yr), fill= "grey", alpha = 0.5)
+p4 + ggtitle("Acceptable Region Further Restricted by Launcher Constraints")
 ```
+
+### Allocation B
+
+#### Fiat Act B1: Launcher Restrictions
+
+Suppose we have a long and satisfactory history with a particular launcher type. Perhaps we are aware that we can acquire these launchers on advantageous terms from competing suppliers. Suppose that this launcher type is capable of accelerating a projectile whose mass does not exceed $0.8 \thinspace \mathrm{kg}$ to a velocity not less than $2 \thinspace \mathrm{m}\cdot\mathrm{s}^{-1}$.
+
+```{r}
+#| echo: false
+p4 <- p2 + 
+      geom_ribbon(data = filter(df2, vm <= 2), aes(x = m, ymin = vm, ymax = 2), fill = "grey", alpha = 0.5) +
+      geom_ribbon(data = filter(df2, m >= 0.8), aes(x = m, ymin = 2, ymax = Inf), fill = "grey", alpha = 0.5)
+p4 + ggtitle("Acceptable Region Restricted by Launcher Constraints")
+```
+
+#### Fiat Act B2: Projectile Restrictions
+
+Our launcher guarantees a minimum velocity of $2 \thinspace \mathrm{m}\cdot\mathrm{s}^{-1}$, which will achieve the acceptable energy only for a projectile whose mass $m$ satisfies
+
+$$
+m \ge \frac{2 \thinspace\mathrm{J}}{4 \thinspace\mathrm{m}^2 \cdot \mathrm{s}^{-2}} = 0.5 \thinspace\mathrm{kg}
+$$
+
+The acceptable region is this constraint is:
+
+```{r}
+#| echo: false
+p5 <- p4 + 
+      geom_ribbon(data = filter(df2, m <= 0.5), aes(x = m, ymin = vm, ymax = Inf), fill = "grey", alpha = 0.5)
+p5 + ggtitle("Acceptable Region Futher Restricted by Projectile Constraints")
+```
+
+### Discussion
+
+Before our fiat acts of design, the acceptable region was the half-plane bounded below and to the left by an inverse-square relationship. After our fiat acts, the acceptable region is a half-infinite rectangular strip. The strip is carefully chosen to lie entirely in the interior of the original acceptable region, but there is no meaningful sense in which the requirements on $m$ and $v$ are *derived* from the original constraint, much less any requirement. There are of course an infinite number of alternate requirements that are acceptable. Moreover, the requirements on $m$, taken in isolation, do not suffice for system acceptability, nor does the requirement on $v$.
+
+We could just have easily begun with a preference for a proven launcher with fixed characteristics and incorporated those constraints into requirements on the projectile, in which case our feasible region would likely have both a different shape and a different locus in the space of all possible realizations.
+
+This notion is largely in keeping with Bob Rasmussen's views on System Architecting, in which requirements do not "trace" directly to higher-level requirements, but instead to behavior constraints that incorporate design authority and true facts of the real world.
